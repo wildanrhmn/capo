@@ -75,7 +75,7 @@ export function setupProvider(gateway: CrooGateway, cfg: ProviderConfig): Provid
     const neg = await gateway.getNegotiation(negId);
     const input = cfg.parseInput(loop, neg.requirements);
     const entries = rosterForLoop(cfg.resolution, loop);
-    log(`running "${loop}" for order ${orderId} over ${entries.length} sub-agents`);
+    log(`running "${loop}" for order ${orderId}`);
 
     const out = await runLoop(gateway, loop, entries, input, cfg.payQueue, { deadlineMs: 180_000, log });
     await gateway.deliver(orderId, { deliverableType: "text", deliverableText: out.synthesis.markdown });

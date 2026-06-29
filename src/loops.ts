@@ -36,6 +36,7 @@ export async function runLoop(
   options: RunLoopOptions = {},
 ): Promise<LoopResult> {
   const active = selectEntries(loop, entries, input);
+  options.log?.(`fanning out to ${active.length} sub-agent(s)`);
   const tasks: SubTask[] = active.map((e) => ({
     role: e.role,
     agentName: e.agentName,
