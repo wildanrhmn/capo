@@ -59,10 +59,11 @@ const online = resolution.resolved.filter((r) => r.online).length;
 if (resolution.problems.length > 0) for (const p of resolution.problems) console.warn("[roster]", p);
 
 const payQueue = new PayQueue();
-setupProvider(gateway, { capoAgentId, serviceLoops, resolution, payQueue, parseInput, log: (m) => console.log("[capo]", m) });
+const provider = setupProvider(gateway, { capoAgentId, serviceLoops, resolution, payQueue, parseInput, log: (m) => console.log("[capo]", m) });
 
 await gateway.start();
 console.log(`[capo] live · agent=${capoAgentId} · services=${JSON.stringify(serviceLoops)} · roster=${online} online`);
+await provider.fulfillPaidBacklog();
 process.on("SIGINT", () => {
   void gateway.stop();
   process.exit(0);
