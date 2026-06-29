@@ -13,6 +13,10 @@ const client = new AgentClient(
 );
 
 const id = process.argv[2];
+if (!id) {
+  console.error("usage: tsx scripts/delivery.ts <orderId>");
+  process.exit(1);
+}
 const d = await client.getDelivery(id);
 console.log(d.deliverableText || d.deliverableSchema || "(empty)");
 process.exit(0);
