@@ -10,6 +10,13 @@ export interface MockOptions {
   dropRoles?: string[];
 }
 
+interface MockOrder {
+  orderId: string;
+  negotiationId: string;
+  serviceId: string;
+  status: string;
+}
+
 export function createMockGateway(
   deliverables: Record<string, DeliveryResult>,
   roleByService: Record<string, string>,
@@ -17,9 +24,8 @@ export function createMockGateway(
 ): CrooGateway {
   const handlers = new Set<EventHandler>();
   const emit = (e: CrooEvent): void => handlers.forEach((h) => h(e));
-  const orderToService = new Map<string, string>();
-  const orderToNeg = new Map<string, string>();
   const negStore = new Map<string, { serviceId: string; requirements: string }>();
+  const orders = new Map<string, MockOrder>();
   const latency = opts.latencyMs ?? 150;
   const fail = new Set(opts.failRoles ?? []);
   const drop = new Set(opts.dropRoles ?? []);
@@ -36,32 +42,37 @@ export function createMockGateway(
           return;
         }
         const orderId = mkId("ord");
-        orderToService.set(orderId, input.serviceId);
-        orderToNeg.set(orderId, negotiationId);
-        emit({ type: CrooEventType.OrderCreated, negotiationId, orderId });
+        orders.set(orderId, { orderId, negotiationId, serviceId: input.serviceId, status: "created" });
       }, latency);
       return { negotiationId };
     },
 
+    async pay(orderId: string) {
+      const o = orders.get(orderId);
+      setTimeout(() => {
+        if (o) o.status = "completed";
+      }, 50);
+      return { txHash: mkId("0xtx") };
+    },
+
+    async getDelivery(orderId: string): Promise<DeliveryResult> {
+      const o = orders.get(orderId);
+      const role = o ? roleByService[o.serviceId] : undefined;
+      if (role && deliverables[role]) return deliverables[role];
+      return { deliverableType: "text", deliverableText: `mock result (${role ?? "unknown"})` };
+    },
+
     async getOrder(orderId: string) {
-      return { negotiationId: orderToNeg.get(orderId) ?? "", serviceId: orderToService.get(orderId) ?? "" };
+      const o = orders.get(orderId);
+      return { negotiationId: o?.negotiationId ?? "", serviceId: o?.serviceId ?? "", status: o?.status ?? "created" };
     },
 
     async getNegotiation(negotiationId: string) {
       return negStore.get(negotiationId) ?? { serviceId: "", requirements: "" };
     },
 
-    async pay(orderId: string) {
-      await new Promise((r) => setTimeout(r, 25));
-      setTimeout(() => emit({ type: CrooEventType.OrderCompleted, orderId }), latency);
-      return { txHash: mkId("0xtx") };
-    },
-
-    async getDelivery(orderId: string): Promise<DeliveryResult> {
-      const serviceId = orderToService.get(orderId);
-      const role = serviceId ? roleByService[serviceId] : undefined;
-      if (role && deliverables[role]) return deliverables[role];
-      return { deliverableType: "text", deliverableText: `mock result (${role ?? "unknown"})` };
+    async listOrders() {
+      return [...orders.values()].map((o) => ({ orderId: o.orderId, serviceId: o.serviceId, status: o.status, negotiationId: o.negotiationId }));
     },
 
     async acceptNegotiation() {

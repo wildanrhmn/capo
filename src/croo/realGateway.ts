@@ -27,11 +27,15 @@ export function createRealGateway(config: RealGatewayConfig, sdkKey: string): Cr
     },
     async getOrder(orderId: string) {
       const o = await client.getOrder(orderId);
-      return { negotiationId: o.negotiationId, serviceId: o.serviceId };
+      return { negotiationId: o.negotiationId, serviceId: o.serviceId, status: o.status };
     },
     async getNegotiation(negotiationId: string) {
       const n = await client.getNegotiation(negotiationId);
       return { serviceId: n.serviceId, requirements: n.requirements };
+    },
+    async listOrders(opts: { role: string; status?: string; pageSize?: number }) {
+      const orders = await client.listOrders({ role: opts.role, status: opts.status, pageSize: opts.pageSize ?? 50 });
+      return orders.map((o) => ({ orderId: o.orderId, serviceId: o.serviceId, status: o.status, negotiationId: o.negotiationId }));
     },
     async acceptNegotiation(negotiationId: string) {
       const r = await client.acceptNegotiation(negotiationId);

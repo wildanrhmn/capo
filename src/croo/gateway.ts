@@ -26,8 +26,9 @@ export interface CrooGateway {
   negotiate(input: NegotiateInput): Promise<{ negotiationId: string }>;
   pay(orderId: string): Promise<{ txHash: string }>;
   getDelivery(orderId: string): Promise<DeliveryResult>;
-  getOrder(orderId: string): Promise<{ negotiationId: string; serviceId: string }>;
+  getOrder(orderId: string): Promise<{ negotiationId: string; serviceId: string; status: string }>;
   getNegotiation(negotiationId: string): Promise<{ serviceId: string; requirements: string }>;
+  listOrders(opts: { role: string; status?: string; pageSize?: number }): Promise<Array<{ orderId: string; serviceId: string; status: string; negotiationId: string }>>;
   acceptNegotiation(negotiationId: string): Promise<{ orderId: string }>;
   deliver(orderId: string, result: DeliveryResult): Promise<void>;
   on(handler: EventHandler): void;
