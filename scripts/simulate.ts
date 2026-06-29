@@ -28,7 +28,7 @@ const gateway = createMockGateway(deliverables, roleByService, { failRoles: ["ev
 const payQueue = new PayQueue();
 
 console.log(`Running "brief" loop over ${entries.length} agents (mock gateway; "events" forced to fail, sequential pay)...\n`);
-const out = await runLoop(gateway, "brief", entries, input, payQueue, { deadlineMs: 8000, log: (m) => console.log("  ·", m) });
+const out = await runLoop(gateway, "brief", entries, input, payQueue, { deadlineMs: 15000, log: (m) => console.log("  ·", m) });
 
 console.log("\n--- Fan-out ---");
 for (const r of out.results) {
