@@ -18,6 +18,8 @@ export interface Synthesis {
   model: string;
 }
 
+type Provider = "anthropic" | "openai" | "none";
+
 function bodyOf(r: SubResult): string {
   if (r.status !== "completed") return `FAILED (${r.error ?? "unknown"})`;
   return r.deliverableText || r.deliverableSchema || "(empty)";
@@ -63,7 +65,32 @@ function fallbackMarkdown(loop: LoopName, input: JobInput, results: SubResult[],
   return lines.join("\n");
 }
 
-function extractText(content: unknown): string {
+function chooseProvider(): Provider {
+  const pref = (process.env.CAPO_SYNTH_PROVIDER ?? "auto").toLowerCase();
+  const hasAnthropic = Boolean(process.env.ANTHROPIC_API_KEY);
+  const hasOpenAI = Boolean(process.env.OPENAI_API_KEY);
+  if (pref === "anthropic") return hasAnthropic ? "anthropic" : "none";
+  if (pref === "openai") return hasOpenAI ? "openai" : "none";
+  if (hasAnthropic) return "anthropic";
+  if (hasOpenAI) return "openai";
+  return "none";
+}
+
+function buildPrompt(loop: LoopName, input: JobInput, results: SubResult[], verdict?: Verdict): { system: string; user: string } {
+  const context = results.map((r) => `### ${r.agentName} [${r.role}]\n${bodyOf(r)}`).join("\n\n");
+  const system =
+    `You are Capo, an on-chain crypto copilot. Summarize ONLY the data the sub-agents below returned. ` +
+    `Attribute every claim to its source agent by name. Never invent numbers, addresses, or facts not present in the data. ` +
+    `Translate any non-English content into clear English. If a source FAILED or is unavailable, say so plainly and treat its information as missing. ` +
+    `Output clean, readable markdown (short sections, bullet points where useful) — do not dump raw JSON. ` +
+    (loop === "vet"
+      ? `A rule-based safety verdict has already been computed: "${verdict}". Explain it from the audit/risk data; do NOT make it more favorable than the rule-based verdict.`
+      : `Produce a crisp morning brief: what smart money did, notable moves/events, prices, market mood, and what to watch.`);
+  const user = `User request (${loop}): ${JSON.stringify(input)}\n\nSub-agent results:\n\n${context}\n\nWrite the ${loop === "brief" ? "daily brief" : "token verdict"} in concise English markdown.`;
+  return { system, user };
+}
+
+function extractAnthropicText(content: unknown): string {
   if (!Array.isArray(content)) return "";
   return content
     .filter((b): b is { type: string; text: string } => typeof b === "object" && b !== null && (b as { type?: string }).type === "text")
@@ -72,38 +99,52 @@ function extractText(content: unknown): string {
     .trim();
 }
 
+async function callAnthropic(system: string, user: string, model: string): Promise<string> {
+  const { default: Anthropic } = await import("@anthropic-ai/sdk");
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  const msg = await client.messages.create({
+    model,
+    max_tokens: 1200,
+    system,
+    messages: [{ role: "user", content: user }],
+  });
+  return extractAnthropicText(msg.content);
+}
+
+async function callOpenAI(system: string, user: string, model: string): Promise<string> {
+  const { default: OpenAI } = await import("openai");
+  const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  const res = await client.chat.completions.create({
+    model,
+    max_tokens: 1200,
+    messages: [
+      { role: "system", content: system },
+      { role: "user", content: user },
+    ],
+  });
+  return (res.choices[0]?.message?.content ?? "").trim();
+}
+
 export async function synthesize(loop: LoopName, input: JobInput, results: SubResult[]): Promise<Synthesis> {
   const confidence = confidenceOf(results);
   const verdict = loop === "vet" ? ruleVerdict(results) : undefined;
   const sources: SynthSource[] = results.map((r) => ({ agent: r.agentName, role: r.role, ok: r.status === "completed" }));
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  const model = process.env.CAPO_SYNTH_MODEL ?? "claude-haiku-4-5";
+  const provider = chooseProvider();
 
-  if (!apiKey) {
+  if (provider === "none") {
     return { markdown: fallbackMarkdown(loop, input, results, verdict), confidence, verdict, sources, model: "fallback" };
   }
 
+  const model =
+    provider === "anthropic"
+      ? process.env.CAPO_SYNTH_MODEL ?? "claude-haiku-4-5"
+      : process.env.CAPO_OPENAI_MODEL ?? "gpt-4o-mini";
+
   try {
-    const { default: Anthropic } = await import("@anthropic-ai/sdk");
-    const client = new Anthropic({ apiKey });
-    const context = results.map((r) => `### ${r.agentName} [${r.role}]\n${bodyOf(r)}`).join("\n\n");
-    const system =
-      `You are Capo, an on-chain crypto copilot. Summarize ONLY the data the sub-agents below returned. ` +
-      `Attribute every claim to its source agent by name. Never invent numbers, addresses, or facts not present in the data. ` +
-      `If a source FAILED, say so plainly and treat its information as missing. ` +
-      (loop === "vet"
-        ? `A rule-based safety verdict has already been computed: "${verdict}". Explain it from the audit/risk data; do NOT make it more favorable than the rule-based verdict.`
-        : `Produce a crisp morning brief: what smart money did, notable moves, and what to watch.`);
-    const prompt = `User request (${loop}): ${JSON.stringify(input)}\n\nSub-agent results:\n\n${context}\n\nWrite the ${loop === "brief" ? "daily brief" : "token verdict"} in concise markdown.`;
-    const msg = await client.messages.create({
-      model,
-      max_tokens: 1200,
-      system,
-      messages: [{ role: "user", content: prompt }],
-    });
-    const text = extractText(msg.content);
+    const { system, user } = buildPrompt(loop, input, results, verdict);
+    const text = provider === "anthropic" ? await callAnthropic(system, user, model) : await callOpenAI(system, user, model);
     if (!text) return { markdown: fallbackMarkdown(loop, input, results, verdict), confidence, verdict, sources, model: "fallback" };
-    return { markdown: text, confidence, verdict, sources, model };
+    return { markdown: text, confidence, verdict, sources, model: `${provider}:${model}` };
   } catch (err) {
     const note = `\n\n_(synthesis fell back to deterministic mode: ${(err as Error).message})_`;
     return { markdown: fallbackMarkdown(loop, input, results, verdict) + note, confidence, verdict, sources, model: "fallback" };

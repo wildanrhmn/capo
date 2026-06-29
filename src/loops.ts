@@ -1,7 +1,7 @@
 import type { CrooGateway } from "./croo/gateway";
 import type { ResolvedRosterEntry } from "./roster";
 import { buildRequirements } from "./engine/requirements";
-import type { JobInput } from "./engine/requirements";
+import type { JobInput, BriefInput } from "./engine/requirements";
 import { runFanout } from "./engine/orchestrator";
 import type { SubTask, SubResult } from "./engine/orchestrator";
 import type { PayQueue } from "./engine/payQueue";
@@ -20,6 +20,13 @@ export interface RunLoopOptions {
   log?: (msg: string) => void;
 }
 
+function selectEntries(loop: LoopName, entries: ResolvedRosterEntry[], input: JobInput): ResolvedRosterEntry[] {
+  if (loop !== "brief") return entries;
+  const wallets = (input as BriefInput).watchlistWallets ?? [];
+  if (wallets.length > 0) return entries;
+  return entries.filter((e) => e.role !== "whalePositions");
+}
+
 export async function runLoop(
   gateway: CrooGateway,
   loop: LoopName,
@@ -28,7 +35,8 @@ export async function runLoop(
   payQueue: PayQueue,
   options: RunLoopOptions = {},
 ): Promise<LoopResult> {
-  const tasks: SubTask[] = entries.map((e) => ({
+  const active = selectEntries(loop, entries, input);
+  const tasks: SubTask[] = active.map((e) => ({
     role: e.role,
     agentName: e.agentName,
     serviceId: e.serviceId,
