@@ -13,6 +13,8 @@ export interface ProviderConfig {
   resolution: RosterResolution;
   payQueue: PayQueue;
   parseInput: (loop: LoopName, requirements: string) => JobInput;
+  passServiceId?: string;
+  onPass?: (orderId: string) => Promise<string>;
   log?: (msg: string) => void;
 }
 
@@ -57,6 +59,12 @@ export function setupProvider(gateway: CrooGateway, cfg: ProviderConfig): Provid
         const o = await gateway.getOrder(orderId);
         serviceId = serviceId ?? o.serviceId;
         negotiationId = negotiationId ?? o.negotiationId;
+      }
+      if (cfg.passServiceId && serviceId === cfg.passServiceId && cfg.onPass) {
+        const text = await cfg.onPass(orderId);
+        await gateway.deliver(orderId, { deliverableType: "text", deliverableText: text });
+        log(`issued Capo Pass for order ${orderId}`);
+        return;
       }
       const loop = serviceId ? cfg.serviceLoops[serviceId] : undefined;
       if (!loop) {
