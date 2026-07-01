@@ -2,6 +2,7 @@
 
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { gradientBtn } from "@/components/ui";
 
 export type Loop = "brief" | "vet";
 
@@ -56,7 +57,7 @@ export function ExecView({ prepared }: { prepared: Prepared }) {
 
       <div className="mt-4 flex items-center justify-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.01] py-4">
         <span className="font-mono text-sm text-neutral-300">{prepared.principalAmount} USDC</span>
-        <span className="text-brand">→</span>
+        <span className="text-accent">→</span>
         <span className="font-mono text-sm font-semibold text-white">{prepared.tokenSymbol}</span>
       </div>
 
@@ -72,7 +73,7 @@ export function ExecView({ prepared }: { prepared: Prepared }) {
         </p>
       ) : null}
 
-      <a href={prepared.storeUrl} target="_blank" rel="noreferrer" className="btn-brand mt-4 w-full px-5 py-3">
+      <a href={prepared.storeUrl} target="_blank" rel="noreferrer" className={`${gradientBtn} mt-4 w-full px-5 py-3`}>
         Place order on SwapGod →
       </a>
       <button onClick={copy} className="mt-2 w-full rounded-full border border-white/10 px-5 py-2.5 text-xs text-neutral-400 transition hover:text-white">

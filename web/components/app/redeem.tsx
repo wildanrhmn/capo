@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Panel, Pill } from "@/components/ui";
+import { Panel, Label, gradientBtn } from "@/components/ui";
 
 const STORE = process.env.NEXT_PUBLIC_CAPO_STORE_URL ?? "https://agent.croo.network";
 
@@ -39,7 +39,7 @@ export function Redeem({ invalid }: { invalid?: boolean }) {
   return (
     <div className="mx-auto max-w-md">
       <div className="flex justify-center">
-        <Pill>Redeem a Capo Pass</Pill>
+        <Label>Redeem a Capo Pass</Label>
       </div>
       <h1 className="mt-5 text-center text-3xl font-semibold tracking-tight">Enter your code</h1>
       <p className="mx-auto mt-3 max-w-sm text-center text-sm leading-relaxed text-neutral-400">
@@ -52,17 +52,17 @@ export function Redeem({ invalid }: { invalid?: boolean }) {
             onChange={(e) => setCode(e.target.value.toUpperCase())}
             placeholder="CAPO-XXXXXXXX-XXXXXXXX"
             spellCheck={false}
-            className="rounded-xl border border-white/10 bg-black/40 px-4 py-3 font-mono text-sm tracking-wide outline-none placeholder:text-neutral-600 focus:border-brand/50"
+            className="rounded-xl border border-white/10 bg-black/40 px-4 py-3 font-mono text-sm tracking-wide outline-none placeholder:text-neutral-600 focus:border-accent/50"
           />
           {err ? <p className="text-xs text-red-400">{err}</p> : null}
-          <button type="submit" disabled={busy} className="btn-brand px-5 py-3 disabled:opacity-60">
+          <button type="submit" disabled={busy} className={`${gradientBtn} px-5 py-3`}>
             {busy ? "Checking…" : "Redeem code"}
           </button>
         </form>
       </Panel>
       <p className="mt-5 text-center text-sm text-neutral-500">
         No code yet?{" "}
-        <a href={STORE} target="_blank" rel="noreferrer" className="text-brand hover:underline">
+        <a href={STORE} target="_blank" rel="noreferrer" className="text-accent hover:underline">
           Get a Pass on CROO →
         </a>
       </p>

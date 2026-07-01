@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Panel } from "@/components/ui";
+import { Panel, gradientBtn } from "@/components/ui";
 import { RunView, ExecView, type Loop, type Run, type Prepared } from "./results";
 
 const STORE = process.env.NEXT_PUBLIC_CAPO_STORE_URL ?? "https://agent.croo.network";
@@ -95,7 +95,7 @@ export function Dashboard({ initialRemaining, initialRuns }: { code: string; ini
           <h1 className="mt-1 text-2xl font-semibold tracking-tight">What do you want to know?</h1>
         </div>
         <div className="flex items-center gap-2">
-          <span className="rounded-full border border-brand/30 bg-brand/[0.07] px-3 py-1.5 font-mono text-xs text-brand">
+          <span className="rounded-full border border-accent/30 bg-accent/[0.07] px-3 py-1.5 font-mono text-xs text-accent">
             {remaining} credit{remaining === 1 ? "" : "s"}
           </span>
           <button onClick={logout} className="rounded-full border border-white/10 px-3 py-1.5 text-xs text-neutral-400 transition hover:text-white">
@@ -114,7 +114,7 @@ export function Dashboard({ initialRemaining, initialRuns }: { code: string; ini
               setError("");
             }}
             className={`rounded-full px-4 py-1.5 text-sm font-medium capitalize transition ${
-              tab === t ? "bg-brand text-neutral-950" : "text-neutral-400 hover:text-white"
+              tab === t ? "bg-[#0d9488] text-white" : "text-neutral-400 hover:text-white"
             }`}
           >
             {t === "brief" ? "Daily Brief" : t === "vet" ? "Vet Token" : "Execute"}
@@ -171,7 +171,7 @@ export function Dashboard({ initialRemaining, initialRuns }: { code: string; ini
                 <input value={exToken} onChange={(e) => setExToken(e.target.value)} placeholder="AERO" className={inputCls} />
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {PRESETS.map((p) => (
-                    <button key={p} type="button" onClick={() => setExToken(p)} className="rounded-md border border-white/10 px-2 py-0.5 font-mono text-[11px] text-neutral-400 transition hover:border-brand/40 hover:text-brand">
+                    <button key={p} type="button" onClick={() => setExToken(p)} className="rounded-md border border-white/10 px-2 py-0.5 font-mono text-[11px] text-neutral-400 transition hover:border-accent/40 hover:text-accent">
                       {p}
                     </button>
                   ))}
@@ -195,7 +195,7 @@ export function Dashboard({ initialRemaining, initialRuns }: { code: string; ini
           {noCredits && tab !== "execute" ? (
             <p className="mt-3 text-xs text-neutral-500">
               Out of credits.{" "}
-              <a href={STORE} target="_blank" rel="noreferrer" className="text-brand hover:underline">
+              <a href={STORE} target="_blank" rel="noreferrer" className="text-accent hover:underline">
                 Get another Pass →
               </a>
             </p>
@@ -243,7 +243,7 @@ export function Dashboard({ initialRemaining, initialRuns }: { code: string; ini
   );
 }
 
-const inputCls = "w-full rounded-xl border border-white/10 bg-black/40 px-3.5 py-2.5 text-sm outline-none placeholder:text-neutral-600 focus:border-brand/50";
+const inputCls = "w-full rounded-xl border border-white/10 bg-black/40 px-3.5 py-2.5 text-sm outline-none placeholder:text-neutral-600 focus:border-accent/50";
 
 function Field({ label, sub, children }: { label: string; sub?: string; children: React.ReactNode }) {
   return (
@@ -288,7 +288,7 @@ function Form({
       </div>
       <p className="-mt-2 text-xs leading-relaxed text-neutral-500">{hint}</p>
       {children}
-      <button type="submit" disabled={disabled} className="btn-brand px-5 py-2.5 disabled:opacity-50">
+      <button type="submit" disabled={disabled} className={`${gradientBtn} w-full px-5 py-2.5`}>
         {cta}
       </button>
     </form>
@@ -304,7 +304,7 @@ function Placeholder({ tab }: { tab: Tab }) {
 function Pending({ tab }: { tab: Tab }) {
   return (
     <div className="flex h-full min-h-[16rem] flex-col items-center justify-center gap-3 text-center">
-      <span className="h-6 w-6 animate-spin rounded-full border-2 border-brand/30 border-t-brand" />
+      <span className="h-6 w-6 animate-spin rounded-full border-2 border-accent/30 border-t-accent" />
       <p className="text-sm text-neutral-400">
         {tab === "execute" ? "Preparing your swap…" : "Capo is hiring the crew and synthesizing…"}
       </p>
